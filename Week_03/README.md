@@ -1,1 +1,2 @@
-学习笔记
+在老师的基础上进行修改，增加了基于OkHTTP的handler，位置在io.github.kimmking.gateway.outbound.okhttp.OkHttpOutboundHandler。
+另外，filter的实现在io.github.kimmking.gateway.filter.HttpRequestFilterImpl。
