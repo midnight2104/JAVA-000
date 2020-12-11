@@ -3,6 +3,8 @@ package com.example.xademo.service;
 import com.example.xademo.domain.Order;
 import com.example.xademo.mapper.OrderMapper;
 
+import org.apache.shardingsphere.transaction.annotation.ShardingTransactionType;
+import org.apache.shardingsphere.transaction.core.TransactionType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -36,7 +38,6 @@ public class OrderService {
         Order order1 = Order.builder().id(6).orderName("666").build();
         orderMapper.insert(order1);
 
-
         //事务2
         //调用另一个事务 http://localhost:8080/test
         String url = "http://localhost:8080/test";
@@ -49,21 +50,34 @@ public class OrderService {
 
     /**
      * 模拟分布式事务
+     * 测试结果失败了：事务1会回滚，事务2不会回滚。
+     * 问题： shardingsphere 能够解决这种事务吗？
      */
-    //@ShardingTransactionType(TransactionType.XA)
     @Transactional(rollbackFor = Exception.class)
-    public void xaTest() {
+    @ShardingTransactionType(TransactionType.XA)
+    public void xaTest1() {
         //事务1
         Order order1 = Order.builder().id(6).orderName("666").build();
         orderMapper.insert(order1);
 
         //事务2
-        //调用另一个事务 http://localhost:8080/test
+        //调用另一个事务 http://localhost:8080/test ，一个插入操作
         String url = "http://localhost:8080/test";
         ResponseEntity<String> forEntity = restTemplate.getForEntity(url, String.class);
         System.out.println(forEntity);
 
         //模拟异常，事务1会回滚，事务2不会回滚
         System.out.println(1 / 0);
+    }
+
+
+    public void xaTest2() {
+        //事务1
+        Order order1 = Order.builder().id(12).orderName("666 哈哈哈").build();
+        orderMapper.insert(order1);
+
+        //事务2
+        Order order2 = Order.builder().id(13).orderName("666 哈哈哈").build();
+        orderMapper.insert(order1);
     }
 }

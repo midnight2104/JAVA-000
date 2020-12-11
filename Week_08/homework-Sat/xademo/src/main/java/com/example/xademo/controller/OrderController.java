@@ -26,7 +26,7 @@ public class OrderController {
     @GetMapping("/xa")
     public String xa() {
        // orderService.txTest();
-       orderService.xaTest();
+       orderService.xaTest1();
         return "success";
     }
 
