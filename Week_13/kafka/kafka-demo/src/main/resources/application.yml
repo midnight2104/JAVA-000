@@ -1,0 +1,22 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+spring:
+  kafka:
+    #kafka集群
+    bootstrap-servers: 192.168.14.130:9001,192.168.14.130:9002,192.168.14.130:9003
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      #自定义的topic
+      myTopic1: testTopic1
+      myTopic2: testTopic2
+    consumer:
+      group-id: default-group   #默认组id  后面会配置多个消费者组
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: latest
+      enable-auto-commit: false   #关闭自动提交 改由spring-kafka提交
+      auto-commit-interval: 100   #自动提交间隔100ms
+      max-poll-records: 20      #批量消费 一次接收的最大数量
