@@ -89,7 +89,141 @@ bin/kafka-server-start.sh kafka9003.properties
    bin/kafka-consumer-perf-test.sh --bootstrap-server localhost:9002 --topic test32 --fetch-size 1048576 --messages 10000 --threads 1
    ```
 
+#### SpringBoot集成Kafka
 
+1. 添加依赖
+
+   ```xml
+   	<dependency>
+           <groupId>org.springframework.kafka</groupId>
+           <artifactId>spring-kafka</artifactId>
+   	</dependency>
+   ```
+
+2. 属性配置
+
+   ```yaml
+   spring:
+     kafka:
+       #kafka集群
+       bootstrap-servers: 192.168.14.130:9001,192.168.14.130:9002,192.168.14.130:9003
+       producer:
+         key-serializer: org.apache.kafka.common.serialization.StringSerializer
+         value-serializer: org.apache.kafka.common.serialization.StringSerializer
+         #自定义的topic
+         myTopic1: testTopic1
+         myTopic2: testTopic2
+       consumer:
+         group-id: default-group   #默认组id  后面会配置多个消费者组
+         key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+         value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+         auto-offset-reset: latest
+         enable-auto-commit: false   #关闭自动提交 改由spring-kafka提交
+         auto-commit-interval: 100   #自动提交间隔100ms
+         max-poll-records: 20      #批量消费 一次接收的最大数量
+   ```
+
+3. `Kafka`配置类
+
+   ```java
+   @Data
+   @Configuration
+   public class KafkaConfiguration {
+       /**
+        * kafaka集群列表
+        */
+       @Value("${spring.kafka.bootstrap-servers}")
+       private String bootstrapServers;
+    
+       /**
+        * kafaka消费group列表
+        */
+       @Value("${spring.kafka.consumer.group-id}")
+       private String defaultGroupId;
+       
+       /**
+        * 消费开始位置
+        */
+       @Value("${spring.kafka.consumer.auto-offset-reset}")
+       private String autoOffsetReset;
+    
+       /**
+        * 是否自动提交
+        */
+       @Value("${spring.kafka.consumer.enable-auto-commit}")
+       private String enableAutoCommit;
+    
+       /**
+        * #如果'enable.auto.commit'为true，则消费者偏移自动提交给Kafka的频率（以毫秒为单位），默认值为5000。
+        */
+       @Value("${spring.kafka.consumer.auto-commit-interval}")
+       private String autoCommitInterval;
+    
+       /**
+        * 一次调用poll()操作时返回的最大记录数，默认值为500
+        */
+       @Value("${spring.kafka.consumer.max-poll-records}")
+       private String maxPollRecords;
+   
+       /**
+        * 自定义的topic1
+        */
+       @Value("${spring.kafka.producer.myTopic1}")
+       private String myTopic1;
+   
+       /**
+        * 自定义的topic2
+        */
+       @Value("${spring.kafka.producer.myTopic2}")
+       private String myTopic2;
+   }
+   ```
+
+4. `Kafak`的`Producer`
+
+   ```java
+   @RestController
+   @RequestMapping("/kafka")
+   public class KafkaController {
+       @Autowired
+       private KafkaConfiguration kafkaConfiguration;
+       @Autowired
+       private KafkaTemplate<String, String> kafkaTemplate;
+   
+       /**
+        * 发送文本消息
+        *
+        * @param msg
+        * @return
+        */
+       @GetMapping("/send")
+       public String send(@RequestParam String msg) {
+           ListenableFuture<SendResult<String, String>> resultListenableFuture = kafkaTemplate.send(kafkaConfiguration.getMyTopic1(), msg);
+           resultListenableFuture.addCallback(
+                   successCallback -> System.out.println("发送成功：topic= " + kafkaConfiguration.getMyTopic1() + " value= " + msg),
+                   failureCallback -> System.out.println("发送失败：topic= " + kafkaConfiguration.getMyTopic1() + " value= " + msg));
+   
+           return "生产者发送消息给topic1：" + msg;
+       }
+   }
+   ```
+
+5. `Kafak`的`Consumer`
+
+   ```java
+   @Component
+   public class ConsumerListener1 {
+       //消费 myTopic1
+       @KafkaListener(topics = "${spring.kafka.producer.myTopic1}")
+       public void listen(ConsumerRecord<?,String> record) {
+           System.out.println(record);
+           String value = record.value();
+           System.out.println("消费者1接收到消息：" + value);
+       }
+   }
+   ```
+
+   
 
 参考文献：
 
